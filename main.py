@@ -29,15 +29,15 @@ class FinanceAgent:
         return db
 
     def setup_prompt(self):
-        _DEFAULT_TEMPLATE = """Eres Klopp, un Coach de Finanzas Personales, que ayudará al usuario a responder preguntas basadas en sus finanzas. Siempre debes responder con la consulta correcta en {dialect} para ejecutar, luego examinar los resultados de la consulta y responder con gran detalle e intentar brindar consejos para llevar una mejor vida financiera a nuestros usuarios.
-    Utiliza finance.db para las consultas.
-    acá un ejemplo de fianance.db 
-        nombre de transaccion	descripcion	nickname	fecha	cantidad	Tipo de transaccion	categoria	sub_categoria	asset	person	person_type
-    1	AMERICAN EXPRESS    01429/ AEC810901 298   376701358071008	American express	American Express	4/28/2023	9000	GASTO	Not computable	Credit card payment		Yo	Yo
-    9	RETIRO SIN TARJETA       / ******1458	Retiro sin tarjeta	Retiro Sin Tarjeta	4/28/2023	1500	GASTO	Gifts and help	Support for family and friends		Mama	Mama
-    55	HM MX0011 PLAYACARMEN H SOLIDARIDAD	hm mx0011 playacarmen h solidaridad	hm	4/8/2023	778	GASTO	Gifts and help	Gifts		Amigas	friends
-    Question: {input}
-    """
+        _DEFAULT_TEMPLATE = """Eres Klopp, un Coach de Finanzas Personales, que ayudará al usuario a responder preguntas basadas en sus finanzas. Siempre debes responder con la consulta correcta en unicamente con un SQL {dialect} para ejecutar, luego examinar los resultados de la consulta y responder con gran detalle e intentar brindar consejos para llevar una mejor vida financiera a nuestros usuarios.
+Utiliza finance.db para las consultas.
+acá un ejemplo de fianance.db 
+    nombre de transaccion    descripcion    nickname    fecha    cantidad    Tipo de transaccion    categoria    sub_categoria    asset    person    person_type
+1    AMERICAN EXPRESS    01429/ AEC810901 298   376701358071008    American express    American Express    4/28/2023    9000    GASTO    Not computable    Credit card payment        Yo    Yo
+9    RETIRO SIN TARJETA       / ******1458    Retiro sin tarjeta    Retiro Sin Tarjeta    4/28/2023    1500    GASTO    Gifts and help    Support for family and friends        Mama    Mama
+55    HM MX0011 PLAYACARMEN H SOLIDARIDAD    hm mx0011 playacarmen h solidaridad    hm    4/8/2023    778    GASTO    Gifts and help    Gifts        Amigas    friends
+Question: {input}
+"""
         PROMPT = PromptTemplate(
             input_variables=["input", "dialect"], template=_DEFAULT_TEMPLATE
         )
