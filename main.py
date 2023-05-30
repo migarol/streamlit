@@ -1,23 +1,36 @@
 import os
+import sys
+import re
+from io import StringIO, BytesIO
 import pandas as pd
 import sqlite3
 import streamlit as st
-from io import BytesIO
-from langchain.chat_models import ChatOpenAI
-from langchain import SQLDatabase, SQLDatabaseChain
-from langchain.prompts.prompt import PromptTemplate
-import re
-import sys
-from matplotlib import pyplot as plt
-from io import StringIO
 
+from langchain import SQLDatabase, SQLDatabaseChain
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts.prompt import PromptTemplate
+
+
+# Constantes
+MODEL_NAME = "gpt-4"
+DEFAULT_TEMPLATE = """
+Eres Klopp, un Coach de Finanzas Personales, que ayudará al usuario a responder preguntas basadas en sus finanzas. Siempre debes responder con la consulta correcta unicamente con un SQL {dialect} para ejecutar, luego examinar los resultados de la consulta y responder con gran detalle e intentar brindar consejos para llevar una mejor vida financiera a nuestros usuarios.
+Utiliza la tabla finance para las consultas.
+acá un ejemplo de fianance
+    nombre de transaccion    descripcion    nickname    fecha    cantidad    Tipo de transaccion    categoria    sub_categoria    asset    person    person_type
+1    AMERICAN EXPRESS    01429/ AEC810901 298   376701358071008    American express    American Express    4/28/2023    9000    GASTO    Not computable    Credit card payment        Yo    Yo
+9    RETIRO SIN TARJETA       / ******1458    Retiro sin tarjeta    Retiro Sin Tarjeta    4/28/2023    1500    GASTO    Gifts and help    Support for family and friends        Mama    Mama
+55    HM MX0011 PLAYACARMEN H SOLIDARIDAD    hm mx0011 playacarmen h solidaridad    hm    4/8/2023    778    GASTO    Gifts and help    Gifts        Amigas    friends
+28	OPENPAY*HELPHBOMAXCOM CUAUHTEMOC	hbo	Hbo	4/5/2023	89.5	GASTO	Utilities	Streaming services (Netflix, HBO, Disney Plus)	depa Polanco	Arturo	Hijo
+
+Question: {input}
+"""
 
 class FinanceAgent:
     def __init__(self, model_name="gpt-4", db_path="finance.db"):
         self.llm = ChatOpenAI(model_name=model_name)
         self.db = self.load_database(db_path)
         self.prompt = self.setup_prompt()
-        self.thoughts = ""
 
     def load_database(self, db_path):
         dburi = f"sqlite:///{db_path}"
@@ -28,36 +41,25 @@ class FinanceAgent:
         )
         return db
 
+
     def setup_prompt(self):
-        _DEFAULT_TEMPLATE = """Eres Klopp, un Coach de Finanzas Personales, que ayudará al usuario a responder preguntas basadas en sus finanzas. Siempre debes responder con la consulta correcta en unicamente con un SQL {dialect} para ejecutar, luego examinar los resultados de la consulta y responder con gran detalle e intentar brindar consejos para llevar una mejor vida financiera a nuestros usuarios.
-Utiliza finance.db para las consultas.
-acá un ejemplo de fianance.db 
-    nombre de transaccion    descripcion    nickname    fecha    cantidad    Tipo de transaccion    categoria    sub_categoria    asset    person    person_type
-1    AMERICAN EXPRESS    01429/ AEC810901 298   376701358071008    American express    American Express    4/28/2023    9000    GASTO    Not computable    Credit card payment        Yo    Yo
-9    RETIRO SIN TARJETA       / ******1458    Retiro sin tarjeta    Retiro Sin Tarjeta    4/28/2023    1500    GASTO    Gifts and help    Support for family and friends        Mama    Mama
-55    HM MX0011 PLAYACARMEN H SOLIDARIDAD    hm mx0011 playacarmen h solidaridad    hm    4/8/2023    778    GASTO    Gifts and help    Gifts        Amigas    friends
-Question: {input}
-"""
         PROMPT = PromptTemplate(
-            input_variables=["input", "dialect"], template=_DEFAULT_TEMPLATE
+            input_variables=["input", "dialect"], template=DEFAULT_TEMPLATE
         )
         return PROMPT
 
     def chat_with_chatbot(self, query):
-        db_chain = SQLDatabaseChain.from_llm(
-            self.llm, self.db, verbose=True, prompt=self.prompt, use_query_checker=True
-        )
         old_stdout = sys.stdout
         sys.stdout = captured_output = StringIO()
-        result = db_chain.run(query)
+        self.db_chain = SQLDatabaseChain.from_llm(self.llm, self.db, verbose=True, prompt=self.prompt, use_query_checker=True)
+        result = self.db_chain.run(query)
         sys.stdout = old_stdout
-        self.thoughts = self.process_agent_thoughts(captured_output)
+        self.captured_output = captured_output.getvalue()
         return result
 
 
-    def process_agent_thoughts(self, captured_output):
-        thoughts = captured_output.getvalue()
-        cleaned_thoughts = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', thoughts)
+    def process_agent_thoughts(self):
+        cleaned_thoughts = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', self.captured_output)
         cleaned_thoughts = re.sub(r'\[1m>', '', cleaned_thoughts)
         return cleaned_thoughts
 
@@ -103,8 +105,9 @@ if user_api_key:
             st.session_state["chat_history"] = []
         finance_agent = FinanceAgent()
 
+
         with st.form(key="query"):
-            query = st.text_input("Preguntalé a  Klopp", value="", type="default", 
+            query = st.text_input("Preguntale a Klopp", value="", type="default", 
                 placeholder="e-g : Cuanto he gastado en "
                 )
             submitted_query = st.form_submit_button("Submit")
@@ -113,10 +116,10 @@ if user_api_key:
                 st.session_state["chat_history"] = []
         if submitted_query:
             result = finance_agent.chat_with_chatbot(query)
-            finance_agent.display_agent_thoughts(finance_agent.thoughts)
+            cleaned_thoughts = finance_agent.process_agent_thoughts()
+            finance_agent.display_agent_thoughts(cleaned_thoughts)
             finance_agent.update_chat_history(query, result)
             finance_agent.display_chat_history()
-
 
         if df is not None:
             st.subheader("Mis Transacciones:")
@@ -126,5 +129,3 @@ if user_api_key:
                 st.write(f"User: {message_text}")
             else:
                 st.write(f"Klopp: {message_text}")
-
-
