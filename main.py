@@ -78,13 +78,13 @@ class FinanceAgent:
 
 st.set_page_config(layout="wide", page_icon="💬", page_title="Klopp | Assistant 🤖")
 
-user_api_key = st.text_input("Enter your OpenAI API Key", value="", type="password")
+user_api_key = st.text_input("OpenAI Api Key", value="", type="password")
 
 if user_api_key:
     os.environ["OPENAI_API_KEY"] = user_api_key
     st.session_state.setdefault("reset_chat", False)
 
-    uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader("Sube tu archivo de finanzas Klopp", type=["csv", "xlsx"])
 
     if uploaded_file:
         uploaded_file_content = BytesIO(uploaded_file.getvalue())
@@ -104,8 +104,8 @@ if user_api_key:
         finance_agent = FinanceAgent()
 
         with st.form(key="query"):
-            query = st.text_input("Ask Klopp", value="", type="default", 
-                placeholder="e-g : How many rows ? "
+            query = st.text_input("Preguntalé a  Klopp", value="", type="default", 
+                placeholder="e-g : Cuanto he gastado en "
                 )
             submitted_query = st.form_submit_button("Submit")
             reset_chat_button = st.form_submit_button("Reset Chat")
@@ -119,7 +119,7 @@ if user_api_key:
 
 
         if df is not None:
-            st.subheader("Current dataframe:")
+            st.subheader("Mis Transacciones:")
             st.write(df)
         for i, (sender, message_text) in enumerate(st.session_state.chat_history):
             if sender == "user":
