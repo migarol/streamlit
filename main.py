@@ -49,13 +49,18 @@ class FinanceAgent:
         return PROMPT
 
     def chat_with_chatbot(self, query):
-        old_stdout = sys.stdout
-        sys.stdout = captured_output = StringIO()
-        self.db_chain = SQLDatabaseChain.from_llm(self.llm, self.db, verbose=True, prompt=self.prompt, use_query_checker=True)
-        result = self.db_chain.run(query)
-        sys.stdout = old_stdout
-        self.captured_output = captured_output.getvalue()
-        return result
+        try:
+            old_stdout = sys.stdout
+            sys.stdout = captured_output = StringIO()
+            self.db_chain = SQLDatabaseChain.from_llm(self.llm, self.db, verbose=True, prompt=self.prompt, use_query_checker=True)
+            result = self.db_chain.run(query)
+            sys.stdout = old_stdout
+            self.captured_output = captured_output.getvalue()
+            return result
+        except Exception as e:
+            print(f"Hubo un error: {e}")
+            return "Oopsie, estamos en Alpha y aún no somos perfectos, por favor reformula tu pregunta"
+
 
 
     def process_agent_thoughts(self):
